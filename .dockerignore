@@ -1,0 +1,24 @@
+# Never in the image: credentials, login state, private data
+.env
+.env.*
+!.env.example
+secrets/
+secrets.example/
+.data/
+probe-output/
+downloads/
+
+# Development
+node_modules/
+.git/
+.gitignore
+.idea/
+.vscode/
+test/
+scripts/
+docs/
+*.md
+bunfig.toml
+Dockerfile
+.dockerignore
+compose.yaml

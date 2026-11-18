@@ -1,6 +1,6 @@
 # WebUntis MCP server – specification (v0.1)
 
-As of 2026-11-18 · Status: draft (not implemented yet)
+As of 2026-11-18 · Status: implemented (v0.1.0) – endpoints marked ⏳ are implemented defensively but not yet verified with real data
 Based on: [`untis-api.md`](./untis-api.md) (✅ verified with a student account, 📦 from the web app bundle, ⏳ still open). Endpoint choices are based on the first probe run (2026-11-18). Endpoints marked ⏳ still lack test data.
 
 ---
@@ -196,9 +196,9 @@ Details:
 | fileRef | Source | Resolution |
 |---|---|---|
 | `m_<messageId>_<n>` | message attachment | re-read the message → n-th attachment → `attachmentstorageurl` or `messages/{id}/attachment` ⏳ |
-| `h_<homeworkId>_<n>` | homework attachment | re-read the homework of the range/lesson → n-th attachment ⏳ |
-| `d_<date>_<n>_<k>` | message-of-the-day attachment | re-read `newsWidgetData` for the date ⏳ |
-| `l_<date>_<periodId>_<n>` | lesson file (`teachingContentFiles`, `notesAllFiles`) | re-read `calendar-entry/detail` ⏳ |
+| `h_<yyyymmdd>_<homeworkId>_<n>` | homework attachment (date = day the homework was given) | re-read legacy homework for date ±1 → n-th attachment (`url`, else `/api/homeworks/attachments/{id}`) ⏳ |
+| `d_<yyyymmdd>_<n>_<k>` | message-of-the-day attachment | re-read `newsWidgetData` for the date ⏳ |
+| `l_<yyyymmdd>_<periodId>_<n>` | lesson file (`teachingContentFiles`, `notesAllFiles`) | re-read `calendar-entry/detail` ⏳ |
 
 Behaviour (as in itslearning-mcp):
 - `mode=auto` (default): PDF/DOCX/text → **redacted text only**; images → image content; other formats → `resource` blob.
@@ -325,6 +325,7 @@ As in itslearning-mcp:
 | `UPSTREAM_ERROR` | `5xx`/network after retries | WebUntis unreachable |
 | `FILE_REF_UNKNOWN` | invalid or no longer resolvable fileRef | fetch the list again |
 | `FILE_TOO_LARGE` | > `MAX_FILE_MB` | with size |
+| `NOT_A_FILE` | no download location / no text in `mode=text` | with hint |
 | `INVALID_INPUT` | schema validation | with field |
 
 Raw error texts (they may contain IDs or names) are never passed through. They are logged sanitised only.

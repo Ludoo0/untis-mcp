@@ -22,7 +22,10 @@ export type Credentials = {
 } & ({ kind: "secret"; secret: string } | { kind: "password"; password: string });
 
 export function normalizeBase(url: string): string {
-  const trimmed = url.trim().replace(/\/+$/, "").replace(/\/WebUntis.*$/i, "");
+  const trimmed = url
+    .trim()
+    .replace(/\/+$/, "")
+    .replace(/\/WebUntis.*$/i, "");
   if (!trimmed) return "";
   return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
 }
@@ -134,7 +137,9 @@ export class CookieJar {
 
 // ---------- Session ----------
 
-export type RpcResult<T = unknown> = { ok: true; result: T; status: number } | { ok: false; status: number; code?: number; message: string };
+export type RpcResult<T = unknown> =
+  | { ok: true; result: T; status: number }
+  | { ok: false; status: number; code?: number; message: string };
 
 export class UntisSession {
   readonly jar = new CookieJar();
@@ -268,6 +273,7 @@ export function decodeJwtPayload(jwt: string): Record<string, unknown> | undefin
 
 // ---------- Dates ----------
 
-export const isoDate = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+export const isoDate = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 export const untisDate = (d: Date) => Number(isoDate(d).replace(/-/g, ""));
 export const addDays = (d: Date, n: number) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);

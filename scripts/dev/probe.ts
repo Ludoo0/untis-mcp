@@ -125,7 +125,8 @@ function redactUrl(raw: string, base: string): string {
   let host: string;
   if (u.host === own) host = "<school>.webuntis.com";
   else if (/(^|\.)(webuntis\.com|untis\.(at|com|de)|untis-cloud\.\w+)$/i.test(u.hostname)) host = u.host;
-  else if (/(amazonaws\.com|blob\.core\.windows\.net|googleapis\.com)$/i.test(u.hostname)) host = `{storage:${u.hostname.split(".").slice(-2).join(".")}}`;
+  else if (/(amazonaws\.com|blob\.core\.windows\.net|googleapis\.com)$/i.test(u.hostname))
+    host = `{storage:${u.hostname.split(".").slice(-2).join(".")}}`;
   else return "{external-url}";
   const path = u.pathname.split("/").map(redactSegment).join("/");
   const keys = [...new Set(u.searchParams.keys())];
@@ -313,8 +314,16 @@ async function finish(r: StepResult) {
 }
 
 /** REST call (GET or read-only POST query) with schema analysis. */
-async function rest(step: string, path: string, opts: { method?: string; body?: unknown; bearer?: boolean } = {}): Promise<Json | undefined> {
-  const r: StepResult = { step, endpoint: `${opts.method ?? "GET"} ${redactUrl(path, s.base).replace(/^https:\/\/<school>\.webuntis\.com/, "")}`, status: "?" };
+async function rest(
+  step: string,
+  path: string,
+  opts: { method?: string; body?: unknown; bearer?: boolean } = {},
+): Promise<Json | undefined> {
+  const r: StepResult = {
+    step,
+    endpoint: `${opts.method ?? "GET"} ${redactUrl(path, s.base).replace(/^https:\/\/<school>\.webuntis\.com/, "")}`,
+    status: "?",
+  };
   if (opts.body !== undefined) r.requestBodyKeys = Object.keys(opts.body as object);
   const t0 = performance.now();
   let json: Json;
@@ -372,7 +381,8 @@ async function rpc(step: string, kind: "rpc" | "intern", method: string, params:
 async function probeFile(step: string, path: string, bearer = true) {
   const r: StepResult = { step, endpoint: redactUrl(path, s.base), status: "?" };
   try {
-    const res = path.startsWith("http") && !path.startsWith(s.base) ? await fetch(path, { redirect: "manual" }) : await s.request(path, { bearer });
+    const res =
+      path.startsWith("http") && !path.startsWith(s.base) ? await fetch(path, { redirect: "manual" }) : await s.request(path, { bearer });
     const buf = await res.arrayBuffer();
     r.status = res.status;
     r.contentType = res.headers.get("content-type")?.split(";")[0] ?? null;
@@ -493,11 +503,17 @@ async function main() {
       },
     });
   }
-  await rpc("rpc: substitutions", "rpc", "getSubstitutions", { startDate: untisDate(today), endDate: untisDate(addDays(today, 7)), departmentId: 0 });
+  await rpc("rpc: substitutions", "rpc", "getSubstitutions", {
+    startDate: untisDate(today),
+    endDate: untisDate(addDays(today, 7)),
+    departmentId: 0,
+  });
   await rpc("rpc: exam types", "rpc", "getExamTypes");
   await rpc("rpc: exams", "rpc", "getExams", { startDate: untisDate(from), endDate: untisDate(to), examTypeId: 0 });
   await rpc("rpc: class register events", "rpc", "getClassregEvents", { startDate: untisDate(from), endDate: untisDate(to) });
-  await rpc("rpc: timetable with absences", "rpc", "getTimetableWithAbsences", { options: { startDate: untisDate(from), endDate: untisDate(today) } });
+  await rpc("rpc: timetable with absences", "rpc", "getTimetableWithAbsences", {
+    options: { startDate: untisDate(from), endDate: untisDate(today) },
+  });
 
   // ---------- JSON-RPC intern (mobile app, secret only) ----------
   if (creds.kind === "secret" && elemId !== undefined) {
@@ -513,13 +529,19 @@ async function main() {
     });
     await rpc("intern: homework 2017", "intern", "getHomeWork2017", { id: elemId, type: typeName, ...range });
     await rpc("intern: exams 2017", "intern", "getExams2017", { id: elemId, type: typeName, ...range });
-    await rpc("intern: student absences 2017", "intern", "getStudentAbsences2017", { ...range, includeExcused: true, includeUnExcused: true });
+    await rpc("intern: student absences 2017", "intern", "getStudentAbsences2017", {
+      ...range,
+      includeExcused: true,
+      includeUnExcused: true,
+    });
     await rpc("intern: messages of the day 2017", "intern", "getMessagesOfDay2017", { date: isoDate(today) });
   }
 
   // ---------- Legacy REST (old web UI, session cookie) ----------
   if (elemId !== undefined) {
-    const pc = await rest("legacy: weekly timetable page config", `/WebUntis/api/public/timetable/weekly/pageconfig?type=${typeNum}`, { bearer: false });
+    const pc = await rest("legacy: weekly timetable page config", `/WebUntis/api/public/timetable/weekly/pageconfig?type=${typeNum}`, {
+      bearer: false,
+    });
     const formatId = pc?.data?.selectedFormatId ?? pc?.data?.formatId ?? 1;
     await rest(
       "legacy: weekly timetable data",
@@ -527,10 +549,18 @@ async function main() {
       { bearer: false },
     );
   }
-  const hwLegacy = await rest("legacy: homeworks/lessons", `/WebUntis/api/homeworks/lessons?startDate=${untisDate(from)}&endDate=${untisDate(to)}`, { bearer: false });
-  await rest("legacy: exams", `/WebUntis/api/exams?startDate=${untisDate(from)}&endDate=${untisDate(to)}&klasseId=${klasseId ?? -1}&withGrades=true`, {
-    bearer: false,
-  });
+  const hwLegacy = await rest(
+    "legacy: homeworks/lessons",
+    `/WebUntis/api/homeworks/lessons?startDate=${untisDate(from)}&endDate=${untisDate(to)}`,
+    { bearer: false },
+  );
+  await rest(
+    "legacy: exams",
+    `/WebUntis/api/exams?startDate=${untisDate(from)}&endDate=${untisDate(to)}&klasseId=${klasseId ?? -1}&withGrades=true`,
+    {
+      bearer: false,
+    },
+  );
   if (elemId !== undefined) {
     await rest(
       "legacy: student absences",
@@ -538,7 +568,9 @@ async function main() {
       { bearer: false },
     );
   }
-  await rest("legacy: messages of the day (authenticated)", `/WebUntis/api/public/news/newsWidgetData?date=${untisDate(today)}`, { bearer: false });
+  await rest("legacy: messages of the day (authenticated)", `/WebUntis/api/public/news/newsWidgetData?date=${untisDate(today)}`, {
+    bearer: false,
+  });
 
   // Homework attachments (legacy)
   const hwWithFile = (hwLegacy?.data?.homeworks ?? []).find((h: Json) => Array.isArray(h?.attachments) && h.attachments.length);
@@ -546,7 +578,8 @@ async function main() {
     const att = hwWithFile.attachments[0];
     findings.push(`Homework attachment fields: ${Object.keys(att).join(", ")}`);
     if (typeof att.url === "string") await probeFile("legacy: homework attachment download", att.url, false);
-    else if (att.id !== undefined) await probeFile("legacy: homework attachment download (by id)", `/WebUntis/api/homeworks/attachments/${att.id}`, false);
+    else if (att.id !== undefined)
+      await probeFile("legacy: homework attachment download (by id)", `/WebUntis/api/homeworks/attachments/${att.id}`, false);
   } else findings.push("No homework attachment found in the window.");
 
   // ---------- REST view v1 (current web app, bearer) ----------
@@ -556,7 +589,10 @@ async function main() {
   await rest("rest: timegrid", "/WebUntis/api/rest/view/v1/timegrid");
   await rest("rest: dashboard cards", "/WebUntis/api/rest/view/v1/dashboard/cards");
   await rest("rest: timetable menu", "/WebUntis/api/rest/view/v1/timetable/menu");
-  const filter = await rest("rest: timetable filter (my timetable)", "/WebUntis/api/rest/view/v1/timetable/filter?resourceType=STUDENT&timetableType=MY_TIMETABLE");
+  const filter = await rest(
+    "rest: timetable filter (my timetable)",
+    "/WebUntis/api/rest/view/v1/timetable/filter?resourceType=STUDENT&timetableType=MY_TIMETABLE",
+  );
   const resourceId = filter?.preSelected?.id ?? filter?.resources?.[0]?.id ?? elemId;
   const entries = await rest(
     "rest: timetable entries (my timetable, 2 weeks)",
@@ -608,12 +644,18 @@ async function main() {
   }
   const withAtt = msgs.find((m) => m?.hasAttachments);
   if (withAtt?.id !== undefined) {
-    const detail = await rest("rest: message detail (with attachment)", `/WebUntis/api/rest/view/v1/messages/${withAtt.id}?contentAsHtml=true`);
+    const detail = await rest(
+      "rest: message detail (with attachment)",
+      `/WebUntis/api/rest/view/v1/messages/${withAtt.id}?contentAsHtml=true`,
+    );
     const atts: Json[] = detail?.storageAttachments ?? detail?.attachments ?? findArray(detail, /attachment/i) ?? [];
     if (atts[0]) findings.push(`Message attachment fields: ${Object.keys(atts[0]).join(", ")}`);
     const key = atts[0]?.id ?? atts[0]?.storageClientKey;
     if (key !== undefined) {
-      const urlRes = await rest("rest: attachment storage url", `/WebUntis/api/rest/view/v1/messages/${encodeURIComponent(String(key))}/attachmentstorageurl`);
+      const urlRes = await rest(
+        "rest: attachment storage url",
+        `/WebUntis/api/rest/view/v1/messages/${encodeURIComponent(String(key))}/attachmentstorageurl`,
+      );
       const signed = urlRes?.downloadUrl ?? urlRes?.url;
       if (typeof signed === "string") await probeFile("attachment download via storage url", signed);
     }

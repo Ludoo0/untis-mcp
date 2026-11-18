@@ -1,21 +1,48 @@
 {
   "name": "untis-mcp",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Read-only MCP server for WebUntis with redaction of personal data",
   "license": "MIT",
   "author": "Ludo",
-  "keywords": ["mcp", "model-context-protocol", "webuntis", "untis", "school", "timetable", "privacy", "redaction", "bun"],
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "webuntis",
+    "untis",
+    "school",
+    "timetable",
+    "privacy",
+    "redaction",
+    "bun"
+  ],
   "private": true,
   "type": "module",
   "engines": {
     "bun": ">=1.4"
   },
   "scripts": {
+    "start": "bun run src/server.ts",
+    "test": "bun test",
     "typecheck": "tsc --noEmit -p .",
+    "lint": "biome ci .",
+    "format": "biome check --write .",
+    "call": "bun run scripts/call.ts",
+    "smoke": "bun run scripts/smoke.ts",
     "probe": "bun run scripts/dev/probe.ts"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.6.8",
     "@types/bun": "latest",
     "typescript": "^7.0.2"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "mammoth": "^1.13.0",
+    "unpdf": "^2.2.1",
+    "zod": "^4.6.7"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Ludoo0/untis-mcp.git"
   }
 }

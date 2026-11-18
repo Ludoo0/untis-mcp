@@ -1,0 +1,38 @@
+# untis-mcp – Streamable HTTP on 127.0.0.1:3000
+#
+# Before the first start: create secrets/ from secrets.example/ (see secrets.example/README.txt).
+#   docker compose up -d --build
+services:
+  untis-mcp:
+    image: untis-mcp:local
+    build: .
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3000:3000"   # localhost only; put a TLS reverse proxy in front for remote access
+    environment:
+      UNTIS_QR_URL_FILE: /run/secrets/untis_qr_url
+      MCP_API_KEY_FILE: /run/secrets/mcp_api_key
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      REDACTION_LANGUAGE: ${REDACTION_LANGUAGE:-de}
+      REDACTION_KEEP_WORDS: ${REDACTION_KEEP_WORDS:-}
+      TIMEZONE: ${TIMEZONE:-Europe/Berlin}
+      # ABSENCE_TEXTS: drop          # never return absence reasons/texts
+      # REDACT_TEACHERS: "true"      # pseudonymise teachers as well
+    secrets: [untis_qr_url, mcp_api_key]
+    volumes:
+      - untis-data:/data
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop: [ALL]
+    security_opt:
+      - "no-new-privileges:true"
+
+secrets:
+  untis_qr_url:
+    file: ./secrets/untis_qr_url
+  mcp_api_key:
+    file: ./secrets/mcp_api_key
+
+volumes:
+  untis-data:
