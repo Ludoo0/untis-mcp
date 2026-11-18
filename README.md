@@ -1,10 +1,31 @@
 # untis-mcp
 
+[![CI](https://github.com/Ludoo0/untis-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/Ludoo0/untis-mcp/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/Ludoo0/untis-mcp)](https://github.com/Ludoo0/untis-mcp/releases/latest)
+[![Docker image](https://img.shields.io/badge/ghcr.io-ludoo0%2Funtis--mcp-2496ED?logo=docker&logoColor=white)](https://github.com/Ludoo0/untis-mcp/pkgs/container/untis-mcp)
+[![License: MIT](https://img.shields.io/github/license/Ludoo0/untis-mcp)](LICENSE)
+
 Read-only [MCP](https://modelcontextprotocol.io) server for **WebUntis** (school timetable system): lets AI agents read the timetable, timetable changes, homework, exams, absences and messages of a **student account** – with **redaction of personal data**. Only the last names (and abbreviations) of teachers are shown; the student appears as "Ich"/"Me", everybody else as a pseudonym.
+
+```
+Agent ──MCP──▶ untis-mcp ──JSON-RPC/REST──▶ https://<your-school>.webuntis.com
+                 │
+                 └─ teachers by last name only, pseudonyms for everyone else,
+                    strips e-mail/phone/links/tokens, returns allowlisted results only
+```
 
 - Works with SSO accounts (e.g. school portal login): login via the **Untis Mobile QR code** (app secret + TOTP). Native accounts can also use a password.
 - Bun + TypeScript, stdio or Streamable HTTP, Docker image.
-- Specification: [`docs/mcp-server-spec.md`](docs/mcp-server-spec.md) · API findings: [`docs/untis-api.md`](docs/untis-api.md)
+- Specification: [`docs/mcp-server-spec.md`](docs/mcp-server-spec.md) · API findings: [`docs/untis-api.md`](docs/untis-api.md) · Open items: [`docs/roadmap.md`](docs/roadmap.md)
+
+## ⚠️ Disclaimer
+
+- **Unofficial.** This project is not affiliated with, endorsed by or supported by Untis GmbH. "WebUntis" and "Untis" are trademarks of their owner.
+- It uses **undocumented APIs** of the WebUntis web app and the Untis Mobile app. They can change or break at any time without notice.
+- It is **read-only**: it cannot send messages, excuses or read confirmations, or change anything else.
+- **You are responsible** for complying with the terms of use of your school and of WebUntis, and with data-protection law (e.g. the GDPR) – especially because the data concerns minors and third parties (classmates, teachers) and absence reasons can be health data. Only use it with an account you are entitled to use.
+- **Pseudonymisation is not anonymisation.** Redaction considerably reduces what reaches an AI model, but it cannot catch everything (see [Privacy](#privacy)). **File and image contents are not redacted** – only extracted text is.
+- Provided "as is", without warranty (see [LICENSE](LICENSE)).
 
 ## Tools
 
@@ -50,8 +71,11 @@ Read it with a QR reader app (no online service – the key works like a passwor
 ```bash
 cp -r secrets.example secrets     # PowerShell: Copy-Item -Recurse secrets.example secrets
 # fill secrets/untis_qr_url and secrets/mcp_api_key (see secrets.example/README.txt)
-docker compose up -d --build
+docker compose pull && docker compose up -d   # prebuilt image ghcr.io/ludoo0/untis-mcp (linux/amd64, linux/arm64)
+# or build locally: docker compose up -d --build
 ```
+
+Pin a version with `UNTIS_MCP_VERSION=0.1.0` (default: `latest`), change the host port with `UNTIS_MCP_PORT` (default `3000`) – both can go into a `.env` file next to `compose.yaml`.
 
 The server listens on `http://127.0.0.1:3000/mcp` (bearer API key), health check at `/healthz`. Connect e.g. Claude Code:
 

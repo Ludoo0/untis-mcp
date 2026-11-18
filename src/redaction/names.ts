@@ -99,8 +99,38 @@ export const STOPWORDS = new Set([
 export const SALUTATIONS = ["frau", "herr", "herrn", "fr", "hr", "dr", "mr", "mrs", "ms", "miss"];
 
 const MIN_SINGLE_LEN = 3;
+/**
+ * Minimum length of a single part of a compound name ("Auf der Heide" → "Heide", never "Auf").
+ * Short parts are mostly prepositions/articles that also occur as ordinary words.
+ */
+const MIN_NAME_PART_LEN = 4;
+/** Name particles of 4+ letters that are never replaced on their own. */
+const NAME_PARTICLES = new Set(["della", "delle", "dello", "dalla", "degli", "zwischen"]);
 const MAX_TOKENS = 4;
-const TOKEN_RE = /[\p{L}\p{N}]+(?:['’-][\p{L}\p{N}]+)*/gu;
+/** Words: letters/digits incl. combining marks (decomposed input), joined by apostrophes or hyphens. */
+const TOKEN_RE = /[\p{L}\p{N}][\p{L}\p{N}\p{M}]*(?:['’-][\p{L}\p{N}][\p{L}\p{N}\p{M}]*)*/gu;
+
+/** Letters that NFD does not decompose. */
+const SPECIAL_FOLD: Record<string, string> = { ß: "ss", ẞ: "ss", ø: "o", æ: "ae", œ: "oe", ł: "l", đ: "d", ð: "d", þ: "th", ı: "i" };
+
+/** Case- and diacritic-insensitive form used for matching ("Ibáñez" → "ibanez", "Ødegård" → "odegard"). */
+export function foldName(s: string): string {
+  let out = "";
+  for (const ch of s) {
+    const lower = ch.toLowerCase();
+    out += SPECIAL_FOLD[lower] ?? lower.normalize("NFD").replace(/\p{M}/gu, "");
+  }
+  return out.replace(/’/g, "'");
+}
+
+/** Transliteration of umlauts and Nordic letters ("Müller" → "Mueller", "Søren" → "Soeren"), applied before folding. */
+const transliterate = (s: string) =>
+  s
+    .replace(/[äöüÄÖÜ]/g, (c) => `${c.toLowerCase().normalize("NFD")[0]}e`)
+    .replace(/[øØ]/g, "oe")
+    .replace(/[æÆ]/g, "ae")
+    .replace(/[åÅ]/g, "aa")
+    .replace(/[ßẞ]/g, "ss");
 /** Allowed between the words of a name: spaces, a comma ("Last, First"), a dot ("F. Last"). */
 const SEPARATOR_RE = /^[\s,.]{1,3}$/;
 
@@ -112,7 +142,8 @@ const SEPARATOR_RE = /^[\s,.]{1,3}$/;
 export type EntryKind = "keep" | "replace" | "self";
 type Entry = { kind: EntryKind; replacement: string; owner: string };
 
-export const tokenize = (s: string): string[] => [...(s ?? "").matchAll(TOKEN_RE)].map((m) => m[0].toLowerCase());
+/** Folded words of a text. */
+export const tokenize = (s: string): string[] => [...(s ?? "").matchAll(TOKEN_RE)].map((m) => foldName(m[0]));
 
 export class NameMatcher {
   private map = new Map<string, Entry>();
@@ -131,14 +162,31 @@ export class NameMatcher {
 
   /** Registers one spelling (any casing, words separated by spaces/commas/dots). */
   add(phrase: string, kind: EntryKind, replacement: string, owner: string) {
+    // Original spelling and German transliteration ("Müller" also matches "Mueller")
+    for (const v of new Set([phrase, transliterate(phrase)])) this.addVariant(v, kind, replacement, owner);
+  }
+
+  private foldedStopwords?: Set<string>;
+  private isStopword(t: string) {
+    this.foldedStopwords ??= new Set([...STOPWORDS].map(foldName));
+    return this.foldedStopwords.has(t);
+  }
+
+  private foldedKeepWords?: Set<string>;
+  private isKeepWord(t: string) {
+    this.foldedKeepWords ??= new Set([...this.keepWords].map(foldName));
+    return this.foldedKeepWords.has(t);
+  }
+
+  private addVariant(phrase: string, kind: EntryKind, replacement: string, owner: string) {
     const tokens = tokenize(phrase);
     if (tokens.length === 0 || tokens.length > MAX_TOKENS) return;
     if (tokens.length === 1) {
       const t = tokens[0]!;
       if (t.length < MIN_SINGLE_LEN || /^\d+$/.test(t)) return;
       // The owner's own name is replaced even if it is a common word ("Wolf") – unless explicitly kept
-      if (kind === "replace" && STOPWORDS.has(t)) return;
-      if (kind !== "keep" && this.keepWords.has(t)) return;
+      if (kind === "replace" && this.isStopword(t)) return;
+      if (kind !== "keep" && this.isKeepWord(t)) return;
     }
     const key = tokens.join(" ");
     const next: Entry = { kind, replacement, owner };
@@ -159,7 +207,7 @@ export class NameMatcher {
 
   apply(text: string): string {
     if (!text || this.map.size === 0) return text;
-    const toks = [...text.matchAll(TOKEN_RE)].map((m) => ({ start: m.index!, end: m.index! + m[0].length, lower: m[0].toLowerCase() }));
+    const toks = [...text.matchAll(TOKEN_RE)].map((m) => ({ start: m.index!, end: m.index! + m[0].length, lower: foldName(m[0]) }));
     let out = "";
     let pos = 0;
     let i = 0;
@@ -206,19 +254,32 @@ export type NameParts = { firstName?: string | null; lastName?: string | null; d
 
 const clean = (s?: string | null) => (s ?? "").replace(/\s+/g, " ").trim();
 
+/** Parts of a compound name that are matched on their own ("Anna-Lena" → "Anna", "Lena"; "Auf der Heide" → "Heide"). */
+function compoundParts(s: string): string[] {
+  const tokens = s.split(/[\s-]+/).filter(Boolean);
+  if (tokens.length < 2) return [];
+  return tokens.filter((x) => x.length >= MIN_NAME_PART_LEN && !NAME_PARTICLES.has(foldName(x)));
+}
+
 /**
  * All spellings of a person: "First Last", "Last First" (also matches "Last, First"), "F. Last", display name,
- * and the single words of first and last name (double names: "Anna Lena", "Meyer-Lüdenscheid" → each part).
+ * combinations with parts of compound names ("Anna Kornblum" for "Anna Lena Kornblum"), and the single words
+ * (whole first and last name, parts of compound names with at least 4 letters).
  */
 export function spellings(p: NameParts): { multi: string[]; firstParts: string[]; lastParts: string[] } {
   const first = clean(p.firstName);
   const last = clean(p.lastName);
+  const firstParts = first ? [...new Set([first, ...compoundParts(first)])] : [];
+  const lastParts = last ? [...new Set([last, ...compoundParts(last)])] : [];
   const multi = [clean(p.displayName)];
-  if (first && last) multi.push(`${first} ${last}`, `${last} ${first}`, `${first[0]}. ${last}`);
-  if (last) multi.push(last);
-  if (first) multi.push(first);
-  const parts = (s: string) => [...new Set([s, ...s.split(/[\s-]+/)].filter(Boolean))];
-  return { multi: [...new Set(multi.filter(Boolean))], firstParts: first ? parts(first) : [], lastParts: last ? parts(last) : [] };
+  if (first && last) {
+    multi.push(`${last} ${first}`);
+    for (const l of lastParts) {
+      for (const f of firstParts) multi.push(`${f} ${l}`);
+      multi.push(`${first[0]}. ${l}`);
+    }
+  }
+  return { multi: [...new Set(multi.filter(Boolean))], firstParts, lastParts };
 }
 
 /** Parses REDACTION_KEEP_WORDS (comma-separated) into a lowercase set. */

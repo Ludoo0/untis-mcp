@@ -173,7 +173,7 @@ type LessonStatus = "regular" | "cancelled" | "substitution" | "room_change" | "
 | 5.5 | `untis_list_exams` | `startDate?`, `endDate?` (default: 6 weeks) | `exams[]{examId, date, start, end, type, name, subject, teachers[], rooms[], text?}` – no participant lists, no grades | `getExams2017` (IDs → master data) |
 | 5.6 | `untis_list_absences` | `startDate?` (default: school year start), `endDate?`, `status` (all\|open\|excused\|unexcused) | `absences[]{absenceId, start, end, lessons?, excuseStatus, reason?, text?}`, `totals{count, open, excused, unexcused, lessons?}` | `getStudentAbsences2017` · `api/classreg/absences/students` |
 | 5.7 | `untis_list_messages` | `limit` (20), `unreadOnly`, `search?` | `messages[]{messageId, sent, subject, preview, from: Person, read, hasAttachments, requiresConfirmation}`, `unread` | `rest/view/v1/messages`, `messages/status` (entry schema ⏳) |
-| 5.8 | `untis_get_message` | `messageId` | `message{messageId, sent, subject, from, text (HTML → Markdown, redacted), attachments[]: FileRefDto, recipientsSummary}` | `rest/view/v1/messages/{id}?contentAsHtml=true` ⏳ |
+| 5.8 | `untis_get_message` | `messageId` | `message{messageId, sent, subject, from, text (HTML → Markdown, redacted), attachments[]: FileRefDto, recipients (count)}` | `rest/view/v1/messages/{id}?contentAsHtml=true` ⏳ |
 | 5.9 | `untis_messages_of_day` | `date?` | `items[]{subject, text, attachments[]}` | `api/public/news/newsWidgetData` · `getMessagesOfDay2017` |
 | 5.10 | `untis_get_master_data` | `include[]` (subjects, teachers, rooms, timegrid, holidays, schoolyears) | `subjects[]`, `teachers[]` (last name + abbreviation only), `rooms[]`, `timegrid[]{period, start, end}`, `holidays[]{name, start, end}`, `schoolyears[]`, `currentSchoolyear` | `getUserData2017.masterData` · JSON-RPC |
 | 5.11 | `untis_download_file` | `fileRef`, `mode` (auto\|text\|blob\|both), `maxTextChars` | metadata + `text` (redacted) and/or file/image content | see 5.11 |
@@ -187,7 +187,7 @@ Details:
 - **Exams (5.5):** taken from `getExams2017`, which has no participant lists. The REST/legacy exam endpoints are not used because they list all participants incl. `gender`, `gradeProtection` and `disadvantageCompensation`. If they are ever used as a fallback, these fields and `grade` are never mapped.
 - **Lesson (5.12):** `lessonRef` is the date plus the first period ID from `timetable/entries`; the tool resolves it via `calendar-entry/detail`. `topic` = `teachingContent` (redacted free text). Lesson files (`teachingContentFiles`, `notesAllFiles`) become fileRefs `l_<date>_<periodId>_<n>`. `notesStaff`, `students[]` and `permissions` are never mapped.
 - **Absences (5.6):** sensitive. The tool description says that reasons can contain health data. `ABSENCE_TEXTS=drop` removes `reason`/`text` completely. `createdUser`/`updatedUser`/`studentName` are never emitted.
-- **Messages (5.7/5.8):** the sender becomes `Person` (teacher → last name, otherwise pseudonym). The recipient list is only summarised (`recipientsSummary`, e.g. "class 7b, parents"). Read confirmations are never sent. `requiresConfirmation: true` only informs the agent that confirmation must happen in WebUntis.
+- **Messages (5.7/5.8):** the sender becomes `Person` (teacher → last name, otherwise pseudonym). The recipient list is never emitted, only the number of recipients (`recipients`). Read confirmations are never sent. `requiresConfirmation: true` only informs the agent that confirmation must happen in WebUntis.
 
 ### 5.11 Files
 
@@ -263,7 +263,7 @@ Pipeline (as in itslearning-mcp):
 1. HTML → text/Markdown (scripts/styles removed).
 2. URL filters: only external links with unsuspicious parameters remain; WebUntis/session/storage links → `[Link entfernt]`.
 3. E-mail addresses, phone numbers, ID pairs.
-4. **Name dictionary:** own name (all variants), all students of the school (`getStudents`) and names of parents/staff from structured fields → labels; **teacher first names** are removed ("Hans Müller" → "Müller", "Herr Hans Müller" → "Herr Müller"), and the last name stays. Word-boundary based, case-insensitive, longest match first. Single first names are only replaced if they are ≥ 3 characters and not a stop word or in `REDACTION_KEEP_WORDS`.
+4. **Name dictionary:** own name (all variants), all students of the school (`getStudents`) and names of parents/staff from structured fields → labels; **teacher first names** are removed ("Hans Müller" → "Müller", "Herr Hans Müller" → "Herr Müller"), and the last name stays. Token based (word sequences of up to 4 words), case- and diacritic-insensitive with transliteration ("Ibáñez" = "Ibanez", "Müller" = "Mueller", "Søren" = "Soeren", decomposed input), longest match first. Single names are only replaced if they are ≥ 3 characters and not a stop word or in `REDACTION_KEEP_WORDS`; parts of compound names ("Anna-Lena", "Auf der Heide") count on their own only with ≥ 4 letters and never for name particles.
 5. Length limit per tool.
 
 **Special risk in Untis:** short codes in timetable texts (`lstext`, `info`) are often abbreviations (teacher abbreviations, groups). Teacher abbreviations are allowed, so they are not replaced.

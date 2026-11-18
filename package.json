@@ -4,6 +4,14 @@
   "description": "Read-only MCP server for WebUntis with redaction of personal data",
   "license": "MIT",
   "author": "Ludo",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Ludoo0/untis-mcp.git"
+  },
+  "homepage": "https://github.com/Ludoo0/untis-mcp#readme",
+  "bugs": {
+    "url": "https://github.com/Ludoo0/untis-mcp/issues"
+  },
   "keywords": [
     "mcp",
     "model-context-protocol",
@@ -40,9 +48,5 @@
     "mammoth": "^1.13.0",
     "unpdf": "^2.2.1",
     "zod": "^4.6.7"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/Ludoo0/untis-mcp.git"
   }
 }

@@ -303,12 +303,16 @@ export class PersonRegistry {
       const display = this.teacherDisplay(t);
       const { firstParts, lastParts } = spellings(t);
       if (t.firstName && t.lastName) {
-        m.add(`${t.firstName} ${t.lastName}`, "replace", display, owner);
         m.add(`${t.lastName} ${t.firstName}`, "replace", display, owner);
-        m.add(`${t.firstName[0]}. ${t.lastName}`, "replace", display, owner);
-        for (const sal of SALUTATIONS) {
-          const target = this.redactTeachers ? display : `${capitalize(sal)} ${t.lastName}`;
-          m.add(`${sal} ${t.firstName} ${t.lastName}`, "replace", target, owner);
+        // Combinations with parts of compound names: "Anna Meyer" for "Anna-Lena Meyer-Kranich" → the last name as written
+        for (const l of lastParts) {
+          const shown = this.redactTeachers ? display : l === t.lastName ? display : l;
+          for (const f of firstParts) {
+            m.add(`${f} ${l}`, "replace", shown, owner);
+            for (const sal of SALUTATIONS)
+              m.add(`${sal} ${f} ${l}`, "replace", this.redactTeachers ? display : `${capitalize(sal)} ${l}`, owner);
+          }
+          m.add(`${t.firstName[0]}. ${l}`, "replace", shown, owner);
         }
       }
       for (const p of lastParts) {

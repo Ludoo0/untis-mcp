@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security issue or redaction leak (private)
+    url: https://github.com/Ludoo0/untis-mcp/security/advisories/new
+    about: Personal data or secrets visible to agents, auth bypass, token leaks – please report privately.

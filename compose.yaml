@@ -1,10 +1,15 @@
 # untis-mcp – Streamable HTTP on 127.0.0.1:3000
 #
 # Before the first start: create secrets/ from secrets.example/ (see secrets.example/README.txt).
-#   docker compose up -d --build
+#
+# Prebuilt image from GHCR:   docker compose pull && docker compose up -d
+# Build locally instead:      docker compose up -d --build
+#
+# Pin a version with UNTIS_MCP_VERSION=0.1.0 (default: latest), change the host port with UNTIS_MCP_PORT.
+# Both can be set in a .env file next to this file.
 services:
   untis-mcp:
-    image: untis-mcp:local
+    image: ghcr.io/ludoo0/untis-mcp:${UNTIS_MCP_VERSION:-latest}
     build: .
     restart: unless-stopped
     ports:

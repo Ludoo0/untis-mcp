@@ -95,12 +95,12 @@ The legacy page config (`GET /WebUntis/?school=<loginName>`, also in `GET /api/a
 
 | Field | Value | Meaning |
 |---|---|---|
-| `ssoOidc` | `true` | OpenID Connect login via the state's school portal (label `oidcProviderLabel`, a UCS portal) |
+| `ssoOidc` | `true` | OpenID Connect login via an external school portal (label in `oidcProviderLabel`) |
 | `hideWuLogin` | `false` | the native WebUntis login form is still offered |
 | `ssoOffice365` | `false` | – |
 | `ssoSamlProviders` | `[]` | no SAML |
 
-Students of the reference school log in via the **UCS portal (OIDC)** and usually have no native WebUntis password. A headless OIDC login is **not supported**.
+Students of the reference school log in via the **school portal (OIDC)** and usually have no native WebUntis password. A headless OIDC login is **not supported**.
 
 ### Path 1: Untis Mobile app secret (TOTP) ✅
 
@@ -245,7 +245,7 @@ GET /api/rest/view/v1/timetable/entries
 | REST `classreg/homework/list`, `classreg/homework/meta` | 403 ✅ |
 | REST `api/v2/periods/day-states` | 404 ✅ |
 | anonymous timetable | 403 🌐 |
-| headless OIDC/UCS login | out of scope |
+| headless OIDC login (school portal) | out of scope |
 | everything that writes (`POST/PUT/PATCH/DELETE` except list queries) | not used |
 
 ## Personal data & redaction

@@ -1,0 +1,20 @@
+name: Feature request
+description: Suggest an improvement or a new read-only tool
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This server is intentionally **read-only** and **privacy-first**. Write operations (sending messages, excuses, read confirmations, bookings) are out of scope.
+        Please do not include real data from a WebUntis account.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What would you like an agent to be able to do?
+    validations:
+      required: true
+  - type: textarea
+    id: api
+    attributes:
+      label: Relevant WebUntis endpoints (if known)
+      description: See docs/untis-api.md for the endpoints known so far.

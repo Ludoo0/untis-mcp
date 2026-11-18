@@ -60,6 +60,40 @@ describe("name dictionary", () => {
     expect(r.text("Lena")).toMatch(/^Schüler:in-[0-9A-F]{4}$/);
   });
 
+  test("other spellings: without diacritics, transliterated, decomposed, capitals", () => {
+    const people = new PersonRegistry({
+      secret: "s3cr3t-for-tests-only",
+      scope: "test",
+      labels: LABELS.de,
+      directory: new TeacherDirectory(null),
+    });
+    people.setSelf(501, { firstName: "Jörg", lastName: "Ibáñez Olmedo" });
+    people.addTeachers([{ id: 11, abbreviation: "LØD", firstName: "Søren", lastName: "Lindqvist-Ødegård" }]);
+    people.addStudents([
+      { id: 502, firstName: "Zoë", lastName: "Größmann" },
+      { id: 503, firstName: "Ida", lastName: "Auf der Heide" },
+    ]);
+    const r = new Redactor(people);
+    expect(r.text("Jorg Ibanez fehlt")).toBe("Ich fehlt");
+    expect(r.text("JOERG")).toBe("Ich");
+    expect(r.text("Olmedo")).toBe("Ich");
+    expect(r.text("Zoe Groessmann und ZOË GRÖSSMANN")).toMatch(/^Schüler:in-[0-9A-F]{4} und Schüler:in-[0-9A-F]{4}$/);
+    expect(r.text("Zoë Größmann")).toMatch(/^Schüler:in-[0-9A-F]{4}$/); // decomposed umlauts
+    // Teacher: first name removed in every spelling, last name (or its part) kept
+    expect(r.text("Soren Lindqvist-Odegard")).toBe("Lindqvist-Ødegård");
+    expect(r.text("Frau Søren Ødegård")).toBe("Frau Ødegård");
+    expect(r.text("Gruß Soeren")).toBe("Gruß [Name]");
+  });
+
+  test("short parts of compound names are not matched on their own", () => {
+    const people = new PersonRegistry({ secret: "s3cr3t-for-tests-only", scope: "test", labels: LABELS.de });
+    people.addStudents([{ id: 503, firstName: "Ida", lastName: "Auf der Heide" }]);
+    const r = new Redactor(people);
+    expect(r.text("Auf der Wiese")).toBe("Auf der Wiese");
+    expect(r.text("Heide")).toMatch(/^Schüler:in-[0-9A-F]{4}$/);
+    expect(r.text("Ida Auf der Heide")).toMatch(/^Schüler:in-[0-9A-F]{4}$/);
+  });
+
   test("stop words and short words are not replaced", () => {
     const m = new NameMatcher("[Name]");
     m.add("Will", "replace", "X", "a");

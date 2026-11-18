@@ -2,6 +2,7 @@
 
 Read-only MCP server for **WebUntis** that lets AI agents read the timetable, changes, homework, exams, absences and messages of a student account – with **redaction of personal data** (only teacher last names/abbreviations are shown). Sister project of `itslearning-mcp` (same structure and rules).
 
+- Open items: [`docs/roadmap.md`](docs/roadmap.md) · Changes: [`CHANGELOG.md`](CHANGELOG.md)
 - Specification: [`docs/mcp-server-spec.md`](docs/mcp-server-spec.md) · Verified API findings: [`docs/untis-api.md`](docs/untis-api.md)
 - Project language: **English** (code, comments, docs, tool descriptions). Redaction labels: `de` (default) and `en`.
 
