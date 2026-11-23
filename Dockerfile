@@ -1,12 +1,12 @@
 # untis-mcp – Streamable HTTP on port 3000
 # No bundling: unpdf (pdf.js) and mammoth are imported dynamically at runtime.
 
-FROM oven/bun:1.4.4-alpine AS deps
+FROM oven/bun:1.4.5-alpine AS deps
 WORKDIR /app
 COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile --production
 
-FROM oven/bun:1.4.4-alpine
+FROM oven/bun:1.4.5-alpine
 WORKDIR /app
 ENV NODE_ENV=production \
     MCP_TRANSPORT=http \
